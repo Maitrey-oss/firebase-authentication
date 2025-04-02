@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "./AuthForm.css"; 
 
+
 const AuthForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,35 +43,36 @@ const AuthForm = () => {
       alert(error.message);
     }
   };
+
   const signInWithGoogle = async () => {
-  try {
-    const userCredential = await signInWithPopup(auth, googleProvider);
-    const user = userCredential.user;
-
-    // Reference to Firestore user document
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
-
-    // If user does not exist in Firestore, create an entry
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        firstName: "",
-        lastName: "",
-        email: user.email, // ✅ Store email
-        mobileNumber: "",
-        birthDate: ""
-      });
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+  
+      // Reference to Firestore user document
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+  
+      // If user does not exist in Firestore, create an entry
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          firstName: "",
+          lastName: "",
+          email: user.email, // ✅ Store email
+          mobileNumber: "",
+          birthDate: ""
+        });
+      }
+  
+      // Redirect to UserDetails
+      navigate("/user-details");
+  
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      alert(error.message);
     }
-
-    // Redirect to UserDetails
-    navigate("/user-details");
-
-  } catch (error) {
-    console.error("Google Sign-In Error:", error);
-    alert(error.message);
-  }
-};
-
+  };
+  
 
   return (
     <div className="auth-container">
@@ -98,11 +100,18 @@ const AuthForm = () => {
         <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <button type="submit" className="auth-button">{isSignUp ? "Sign Up" : "Sign In"}</button>
       </form>
+      
+      {/* ✅ Add Google Sign-In Button */}
+      <button onClick={signInWithGoogle} className="google-button">
+        Sign in with Google
+      </button>
+  
       <button onClick={() => setIsSignUp(!isSignUp)} className="switch-text">
         {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
       </button>
     </div>
   );
+  
 };
 
 export default AuthForm;
