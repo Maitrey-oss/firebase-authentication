@@ -26,6 +26,7 @@ const AuthForm = () => {
         await setDoc(userRef, {
           firstName: firstName,
           lastName: lastName,
+          email: email,
           mobileNumber: "",
           birthDate: ""
         });
