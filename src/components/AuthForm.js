@@ -1,37 +1,38 @@
 import React, { useState } from "react";
 import { auth, googleProvider, db } from "../firebase/firebaseConfig";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import "./AuthForm.css"; // Import the CSS file
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
+import "./AuthForm.css"; 
 
 const AuthForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const navigate = useNavigate(); // Initialize navigation
 
   const handleAuth = async (e) => {
     e.preventDefault();
     try {
+      let userCredential;
       if (isSignUp) {
-        // Create user in Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Store user details in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          uid: user.uid,
-        });
-
-        alert("Registration Successful!");
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        alert("Sign-In Successful!");
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
+
+      // Check if user exists in Firestore
+      const userRef = doc(db, "users", userCredential.user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // If first time login, create user entry
+        await setDoc(userRef, { firstName: "", lastName: "", mobileNumber: "", birthDate: "" });
+      }
+
+      // Redirect to UserDetails form
+      navigate("/user-details");
+
     } catch (error) {
       alert(error.message);
     }
@@ -40,18 +41,15 @@ const AuthForm = () => {
   const signInWithGoogle = async () => {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
-      const user = userCredential.user;
+      const userRef = doc(db, "users", userCredential.user.uid);
+      const userSnap = await getDoc(userRef);
 
-      // Check if user already exists in Firestore
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(userRef, {
-        firstName: user.displayName.split(" ")[0], // Extract First Name from Google Profile
-        lastName: user.displayName.split(" ")[1] || "", // Extract Last Name if available
-        email: user.email,
-        uid: user.uid,
-      }, { merge: true });
+      if (!userSnap.exists()) {
+        await setDoc(userRef, { firstName: "", lastName: "", mobileNumber: "", birthDate: "" });
+      }
 
-      alert("Google Sign-In Successful!");
+      navigate("/user-details"); // Redirect after Google login
+
     } catch (error) {
       alert(error.message);
     }
@@ -61,12 +59,6 @@ const AuthForm = () => {
     <div className="auth-container">
       <h2>{isSignUp ? "Sign Up" : "Sign In"}</h2>
       <form onSubmit={handleAuth} className="auth-form">
-        {isSignUp && (
-          <>
-            <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-            <input type="text" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-          </>
-        )}
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <button type="submit" className="auth-button">{isSignUp ? "Sign Up" : "Sign In"}</button>
