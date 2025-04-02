@@ -42,6 +42,35 @@ const AuthForm = () => {
       alert(error.message);
     }
   };
+  const signInWithGoogle = async () => {
+  try {
+    const userCredential = await signInWithPopup(auth, googleProvider);
+    const user = userCredential.user;
+
+    // Reference to Firestore user document
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    // If user does not exist in Firestore, create an entry
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        firstName: "",
+        lastName: "",
+        email: user.email, // ✅ Store email
+        mobileNumber: "",
+        birthDate: ""
+      });
+    }
+
+    // Redirect to UserDetails
+    navigate("/user-details");
+
+  } catch (error) {
+    console.error("Google Sign-In Error:", error);
+    alert(error.message);
+  }
+};
+
 
   return (
     <div className="auth-container">
